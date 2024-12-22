@@ -1,0 +1,7 @@
+numpy>=1.21
+xarray>=0.20
+zarr>=2.9
+scipy>=1.7
+dask>=2021.11
+distributed>=2021.11
+tqdm>=4.0
