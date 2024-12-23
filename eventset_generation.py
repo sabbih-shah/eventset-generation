@@ -31,7 +31,6 @@ def main():
 
     args = parser.parse_args()
 
-    # Probability that hail = 0 (zero inflation). You could also make this an argument.
     zero_prob = 0.84
 
     print("Opening dataset:", args.input_data_location)
