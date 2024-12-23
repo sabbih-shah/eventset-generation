@@ -26,6 +26,8 @@ The run.sh script will handle passing the appropriate arguments to the Python sc
    ensemble_size
    input_data_location
    output_location
+   lognorm_shape_file
+   lognorm_scale_file
 ```
 
 Adjust the values in run.sh as needed for your specific data and time range.
