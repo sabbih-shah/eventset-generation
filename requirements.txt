@@ -5,3 +5,4 @@ scipy>=1.7
 dask>=2021.11
 distributed>=2021.11
 tqdm>=4.0
+netcdf4
