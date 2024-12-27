@@ -57,6 +57,10 @@ def main():
         
         print("Step 2: Sampling Hail Magnitudes...")
 
+    lognorm_s = lognorm_s.sel(lat=slice(37.0, 40.0),lon=slice(-102.0, -94.0)).compute()
+    lognorm_scale = lognorm_scale.sel(lat=slice(37.0, 40.0),lon=slice(-102.0, -94.0)).compute()
+    hail_prob = hail_prob.sel(lat=slice(37.0, 40.0),lon=slice(-102.0, -94.0)).compute()
+
     sampled_hail_magnitudes = []
     for t in tqdm(range(hail_prob.time.size), desc="Time Step Progress"):
         # Probability of hail at this time step (2D lat/lon)
