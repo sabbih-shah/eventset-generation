@@ -36,6 +36,6 @@ Adjust the values in run.sh as needed for your specific data and time range.
 
 To process a complete year use the 
 ```bash
-bash batch_process_year.sh 2023
+bash batch_year_process.sh 2023
 ```
 Make sure to adjust the input and output paths appropriately.
