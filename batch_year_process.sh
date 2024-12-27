@@ -12,6 +12,15 @@
 
 set -e
 
+# ------------------------------
+# SET YOUR MAIN PATHS HERE
+# ------------------------------
+INPUT_BASE="/pscratch/sd/s/sabbih/scs_era5_v1.1/conus"
+OUTPUT_BASE="/pscratch/sd/s/sabbih/weather_forcasting/event_set"
+LOGNORM_SHAPE_FILE="/pscratch/sd/s/sabbih/weather_forcasting/event_set/lognorm_shape.nc"
+LOGNORM_SCALE_FILE="/pscratch/sd/s/sabbih/weather_forcasting/event_set/lognorm_scale.nc"
+# ------------------------------
+
 if [ $# -lt 1 ]; then
   echo "Usage: bash $0 <year1> [<year2> ...]"
   exit 1
@@ -28,15 +37,15 @@ for YEAR in "$@"; do
   # Loop through each day of the year
   while [ "$(date -I -d "${CURRENT_DATE}")" != "$(date -I -d "${END_OF_YEAR} + 1 day")" ]; do
 
-    # Here, each job covers just ONE day, so start_time == end_time
+    # Each job covers just ONE day, so start_time == end_time
     START_TIME="${CURRENT_DATE}"
     END_TIME="${CURRENT_DATE}"
 
-    # Example output location, labeled by the specific day
-    # e.g., /pscratch/.../YEAR-01-01.zarr, YEAR-01-02.zarr, etc.
-    OUTPUT_LOCATION="/pscratch/sd/s/sabbih/weather_forcasting/event_set/${START_TIME}.zarr"
+    # Input and output files for this specific day
+    INPUT_DATA_LOCATION="${INPUT_BASE}/${YEAR}/*.nc"
+    OUTPUT_LOCATION="${OUTPUT_BASE}/${START_TIME}.zarr"
 
-    # Slurm Job
+    # Submit Slurm job
     sbatch <<EOF
 #!/bin/bash
 #SBATCH -C cpu
@@ -54,10 +63,10 @@ python eventset_generation.py \\
   --start_time ${START_TIME} \\
   --end_time ${END_TIME} \\
   --ensemble_size 1000 \\
-  --input_data_location "/pscratch/sd/s/sabbih/scs_era5_v1.1/conus/${YEAR}/*.nc" \\
+  --input_data_location "${INPUT_DATA_LOCATION}" \\
   --output_location "${OUTPUT_LOCATION}" \\
-  --lognorm_shape_file "/pscratch/sd/s/sabbih/weather_forcasting/event_set/lognorm_shape.nc" \\
-  --lognorm_scale_file "/pscratch/sd/s/sabbih/weather_forcasting/event_set/lognorm_scale.nc"
+  --lognorm_shape_file "${LOGNORM_SHAPE_FILE}" \\
+  --lognorm_scale_file "${LOGNORM_SCALE_FILE}"
 EOF
 
     echo "Submitted job for ${CURRENT_DATE}"
