@@ -57,10 +57,12 @@ def main():
         
         print("Step 2: Sampling Hail Magnitudes...")
 
+    # slice to Kansas
     lognorm_s = lognorm_s.sel(lat=slice(37.0, 40.0),lon=slice(-102.0, -94.0)).compute()
     lognorm_scale = lognorm_scale.sel(lat=slice(37.0, 40.0),lon=slice(-102.0, -94.0)).compute()
     hail_prob = hail_prob.sel(lat=slice(37.0, 40.0),lon=slice(-102.0, -94.0)).compute()
-
+    
+    
     sampled_hail_magnitudes = []
     for t in tqdm(range(hail_prob.time.size), desc="Time Step Progress"):
         # Probability of hail at this time step (2D lat/lon)
@@ -129,7 +131,7 @@ def main():
         name="sampled_hail_magnitudes"
     )
 
-    print(f"Saving file to Zarr: {output_location}")
+    print(f"Saving file to Zarr: {args.output_location}")
     compressor = zarr.Blosc(cname='zstd', clevel=9, shuffle=2)
 
     encoding = {
