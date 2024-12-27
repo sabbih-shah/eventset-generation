@@ -39,3 +39,11 @@ To process a complete year use the
 bash batch_year_process.sh 2023
 ```
 Make sure to adjust the input and output paths appropriately.
+
+The defualts are:
+```bash
+INPUT_BASE="/pscratch/sd/s/sabbih/scs_era5_v1.1/conus"
+OUTPUT_BASE="/pscratch/sd/s/sabbih/weather_forcasting/event_set"
+LOGNORM_SHAPE_FILE="/pscratch/sd/s/sabbih/weather_forcasting/event_set/lognorm_shape.nc"
+LOGNORM_SCALE_FILE="/pscratch/sd/s/sabbih/weather_forcasting/event_set/lognorm_scale.nc"
+```
