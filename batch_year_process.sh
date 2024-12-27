@@ -1,61 +1,68 @@
 #!/bin/bash
 #
 # Usage:
-#   bash run.sh 2022 2023 2024
+#   bash run.sh 2022 2023
 #
 # Explanation:
-#   This script loops over all year arguments provided:
-#   1. Sets start and end times for each year
-#   2. Adjusts output directory names for each year
-#   3. Updates the --input_data_location to include the given year
-#   4. Submits a Slurm job (sbatch) running eventset_generation.py
+#   For each year passed as an argument (e.g., 2022, 2023):
+#     1. Loop over each day from YYYY-01-01 through YYYY-12-31.
+#     2. Submit a Slurm job (sbatch) where --start_time and --end_time
+#        are set to that specific day.
+#     3. The output file/path can also be customized to show each day.
 
-# Exit script on any error
 set -e
 
-# Make sure at least one year argument is supplied
 if [ $# -lt 1 ]; then
-  echo "Usage: bash $0 <year1> [<year2> <year3> ...]"
+  echo "Usage: bash $0 <year1> [<year2> ...]"
   exit 1
 fi
 
-# Loop over each year provided as a command-line argument
 for YEAR in "$@"; do
+  # Define first and last day of the year
+  START_OF_YEAR="${YEAR}-01-01"
+  END_OF_YEAR="${YEAR}-12-31"
 
-  # Example: set to a single day
-  START_TIME="${YEAR}-01-01"
-  END_TIME="${YEAR}-01-01"
+  # Convert to a date-compatible format (ISO 8601) for shell date manipulation
+  CURRENT_DATE="${START_OF_YEAR}"
 
-  # Input data for this year
-  INPUT_DATA_LOCATION="/pscratch/sd/s/sabbih/scs_era5_v1.1/conus/${YEAR}/*.nc"
+  # Loop through each day of the year
+  while [ "$(date -I -d "${CURRENT_DATE}")" != "$(date -I -d "${END_OF_YEAR} + 1 day")" ]; do
 
-  # Output location using the same year in the file name
-  OUTPUT_LOCATION="/pscratch/sd/s/sabbih/weather_forcasting/event_set/${YEAR}-01-01_${YEAR}-01-07.zarr"
+    # Here, each job covers just ONE day, so start_time == end_time
+    START_TIME="${CURRENT_DATE}"
+    END_TIME="${CURRENT_DATE}"
 
-  # Here we use a HERE-doc to submit the Slurm job
-  sbatch <<EOF
+    # Example output location, labeled by the specific day
+    # e.g., /pscratch/.../YEAR-01-01.zarr, YEAR-01-02.zarr, etc.
+    OUTPUT_LOCATION="/pscratch/sd/s/sabbih/weather_forcasting/event_set/${START_TIME}.zarr"
+
+    # Slurm Job
+    sbatch <<EOF
 #!/bin/bash
 #SBATCH -C cpu
 #SBATCH -N 1               # number of nodes
-#SBATCH -t 00:30:00        # job time, adjust as needed
-#SBATCH -q debug           # queue/partition to submit to
-#SBATCH -J eventset_${YEAR}
-#SBATCH -o eventset_${YEAR}.%j.out  # standard output file
-#SBATCH -e eventset_${YEAR}.%j.err  # standard error file
+#SBATCH -t 00:30:00        # job time
+#SBATCH -q debug           # queue or partition
+#SBATCH -J eventset_${YEAR}_${CURRENT_DATE}
+#SBATCH -o eventset_${YEAR}_${CURRENT_DATE}.%j.out
+#SBATCH -e eventset_${YEAR}_${CURRENT_DATE}.%j.err
 
-# Load any required modules if needed
-# module load python/XYZ
+# module load pytorch/2.3.1
+# source activate conda_env
 
 python eventset_generation.py \\
   --start_time ${START_TIME} \\
   --end_time ${END_TIME} \\
   --ensemble_size 1000 \\
-  --input_data_location "${INPUT_DATA_LOCATION}" \\
+  --input_data_location "/pscratch/sd/s/sabbih/scs_era5_v1.1/conus/${YEAR}/*.nc" \\
   --output_location "${OUTPUT_LOCATION}" \\
   --lognorm_shape_file "/pscratch/sd/s/sabbih/weather_forcasting/event_set/lognorm_shape.nc" \\
   --lognorm_scale_file "/pscratch/sd/s/sabbih/weather_forcasting/event_set/lognorm_scale.nc"
-
 EOF
 
-  echo "Submitted job for year: ${YEAR}"
+    echo "Submitted job for ${CURRENT_DATE}"
+
+    # Move to the next day
+    CURRENT_DATE="$(date -I -d "${CURRENT_DATE} + 1 day")"
+  done
 done
