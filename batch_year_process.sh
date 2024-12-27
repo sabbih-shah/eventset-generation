@@ -22,13 +22,9 @@ fi
 # Loop over each year provided as a command-line argument
 for YEAR in "$@"; do
 
-  # Example: use the first few days of the year in your example
+  # Example: set to a single day
   START_TIME="${YEAR}-01-01"
-  END_TIME="${YEAR}-01-02"
-
-  # Adjust these if you want a different date range, e.g., entire year or a particular window
-  # START_TIME="${YEAR}-01-01"
-  # END_TIME="${YEAR}-12-31"
+  END_TIME="${YEAR}-01-01"
 
   # Input data for this year
   INPUT_DATA_LOCATION="/pscratch/sd/s/sabbih/scs_era5_v1.1/conus/${YEAR}/*.nc"
