@@ -53,3 +53,5 @@ These are used in the script as:
     INPUT_DATA_LOCATION="${INPUT_BASE}/${YEAR}/*.nc"
     OUTPUT_LOCATION="${OUTPUT_BASE}/${START_TIME}.zarr"
 ```
+
+Make sure to adjust the paths accordingly and only use **frequency** data with the above. 
