@@ -6,6 +6,7 @@ from tqdm import tqdm
 from scipy.stats import bernoulli
 import dask.array as da
 import sys
+import zarr
 
 
 def logits_to_prob_binary(logits):
