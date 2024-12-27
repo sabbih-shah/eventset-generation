@@ -31,3 +31,11 @@ The run.sh script will handle passing the appropriate arguments to the Python sc
 ```
 
 Adjust the values in run.sh as needed for your specific data and time range.
+
+### Batch Year Processing
+
+To process a complete year use the 
+```bash
+bash batch_process_year.sh 2023
+```
+Make sure to adjust the input and output paths appropriately.
