@@ -10,7 +10,7 @@ import sys
 
 def logits_to_prob_binary(logits):
     """
-    Convert binary logits to probabilities using sigmoid.
+    Convert binary logits to probabilities using the sigmoid function.
     Args:
         logits: xarray DataArray of shape (time, lat, lon)
     Returns:
@@ -26,25 +26,23 @@ def main():
     parser.add_argument("--ensemble_size", type=int, required=True, help="Number of ensembles per time step.")
     parser.add_argument("--input_data_location", required=True, help="Path (possibly with wildcard) to input hail dataset.")
     parser.add_argument("--output_location", required=True, help="Path to store output Zarr dataset.")
-    parser.add_argument("--lognorm_shape_file", default=None, help="Path to netCDF file with precomputed lognorm_s (lognorm shape). If provided, Step 1 is skipped.")
-    parser.add_argument("--lognorm_scale_file", default=None, help="Path to netCDF file with precomputed lognorm_scale. If provided, Step 1 is skipped.")
+    parser.add_argument("--lognorm_shape_file", required=True, default=None, help="Path to netCDF file with precomputed lognorm_s (lognorm shape).")
+    parser.add_argument("--lognorm_scale_file",  required=True, default=None, help="Path to netCDF file with precomputed lognorm_scale.")
 
     args = parser.parse_args()
 
-    zero_prob = 0.84
-
     print("Opening dataset:", args.input_data_location)
-    hail_reg = xr.open_mfdataset(args.input_data_location, combine='by_coords')
+    ds = xr.open_mfdataset(args.input_data_location, combine='by_coords')
 
     print(f"Slicing dataset from {args.start_time} to {args.end_time} ...")
-    hail_reg = hail_reg.sel(time=slice(args.start_time, args.end_time))
+    ds = ds.sel(time=slice(args.start_time, args.end_time))
 
-    # Apply the logits->prob transformation
-    # (Adjust this line if "hail_logits" is actually a variable in hail_reg)
-    hail_reg = hail_reg["hail_logits"].map_blocks(logits_to_prob_binary).compute()
+    # Convert hail logits -> hail_prob
+    hail_prob = ds["hail_logits"].map_blocks(logits_to_prob_binary).compute()
+    hail_prob = hail_prob.where(hail_prob >= 0.1, 0)
 
     # If no data falls within the selected date range, raise an error
-    if hail_reg.time.size == 0:
+    if hail_prob.time.size == 0:
         raise ValueError("No data found in the specified time range.")
 
     # Convert ensembles per time step to a variable
@@ -56,75 +54,57 @@ def main():
 
         lognorm_s = xr.open_dataarray(args.lognorm_shape_file).compute()
         lognorm_scale = xr.open_dataarray(args.lognorm_scale_file).compute()
-
-        skip_step_1 = True
-    else:
-        skip_step_1 = False
-
-    if not skip_step_1:
-        print("Step 1: Computing Log-Normal Parameters...")
-
-        # Keep only hail > 0, set negative or zero hail to NaN
-        hail_pos = hail_reg.where(hail_reg > 0)
-
-        # Compute count, mean, std over 'time' dimension, ignoring NaNs
-        count_hail = hail_pos.count(dim="time")
-        mean_hail = hail_pos.mean(dim="time", skipna=True)
-        std_hail = hail_pos.std(dim="time", skipna=True)
-
-        # Replace any 0 or NaN mean/std with a small positive number (1e-6)
-        mean_hail_filled = mean_hail.fillna(1e-6).clip(min=1e-6)
-        std_hail_filled = std_hail.fillna(1e-6).clip(min=1e-6)
-
-        # Use a mask for cells with at least 2 valid hail values
-        valid_mask = count_hail >= 2
-
-        # Compute log-normal parameters
-        lognorm_s = np.sqrt(np.log(1.0 + (std_hail_filled / mean_hail_filled) ** 2))
-        lognorm_scale = mean_hail_filled / np.sqrt(
-            1.0 + (std_hail_filled / mean_hail_filled) ** 2
-        )
-
-        # If count_hail < 2, set them to 0
-        lognorm_s = lognorm_s.where(valid_mask, other=0.0)
-        lognorm_scale = lognorm_scale.where(valid_mask, other=0.0)
-
-        # Clean up
-        del count_hail, mean_hail, std_hail, mean_hail_filled, std_hail_filled, hail_pos, valid_mask
-        gc.collect()
-
-        print("Log-Normal Parameters Computed!")
-    else:
-        print("Skipping Step 1: Using provided lognorm_s and lognorm_scale...")
-
-    print("Step 2: Sampling Hail Magnitudes...")
+        
+        print("Step 2: Sampling Hail Magnitudes...")
 
     sampled_hail_magnitudes = []
-    # Iterate over time steps in hail_reg
-    for t in tqdm(range(hail_reg.time.size), desc="Time Step Progress"):
-        # Bernoulli for zero-inflation
-        zero_inflation = bernoulli.rvs(1 - zero_prob, size=hail_reg.isel(time=t).shape)
+    for t in tqdm(range(hail_prob.time.size), desc="Time Step Progress"):
+        # Probability of hail at this time step (2D lat/lon)
+        p_hail_this_t = hail_prob.isel(time=t).astype(np.float16).values
 
-        # Compute vectorized lognormal samples using NumPy's lognormal relationship
-        mean_vals = np.log(lognorm_scale)
-        sigma_vals = lognorm_s
+        # -- 1) Build a mask of valid cells (value, non-NaN) --
+        valid_mask = np.isfinite(p_hail_this_t)
 
-        # Generate normally distributed samples
-        Z = np.random.normal(loc=0, scale=1, size=lognorm_s.shape)
-        lognormal_samples = np.exp(sigma_vals * Z + mean_vals)
+        # -- 2) Clip probabilities to [0,1] only where valid; others remain NaN or invalid ---=
+        np.clip(p_hail_this_t, 0.0, 1.0, out=p_hail_this_t, where=valid_mask)
 
-        # Broadcast for ensembles
-        lognormal_samples_broadcast = np.broadcast_to(
-            lognormal_samples, (n_ensembles_per_timestep, *lognorm_s.shape)
+        # -- 3) Convert any NaNs (and anything outside the valid_mask) to 0.0 --
+        p_hail_this_t = np.where(valid_mask, p_hail_this_t, 0.0)
+
+        # -- 4) Bernoulli sample only from the clipped probabilities --
+        random_uniform = np.random.rand(n_ensembles_per_timestep, *p_hail_this_t.shape)
+        hail_events = (random_uniform < p_hail_this_t).astype(np.float16)
+
+        # Compute vectorized lognormal samples
+        mean_vals = np.log(lognorm_scale).astype(np.float16)
+        sigma_vals = lognorm_s.astype(np.float16)
+
+        # 1) Draw Z in shape (ensembles, lat, lon)
+        Z = np.random.normal(loc=0.0, scale=1.0, size=(n_ensembles_per_timestep, *sigma_vals.shape))
+
+        sigma_vals = np.broadcast_to(
+            sigma_vals, 
+            (n_ensembles_per_timestep, *sigma_vals.shape)
+        )
+        mean_vals = np.broadcast_to(
+            mean_vals, 
+            (n_ensembles_per_timestep, *mean_vals.shape)
         )
 
-        # Combine zero-inflation and log-normal samples
-        event_magnitudes = np.where(zero_inflation == 1, lognormal_samples_broadcast, 0)
+        # 3) Now compute lognormal samples for each ensemble independently
+        lognormal_samples = np.exp(sigma_vals * Z + mean_vals)
 
-        # We'll treat hail_reg > 0 as valid hail area
-        masked_magnitudes = event_magnitudes * (hail_reg > 0).isel(time=t).astype(int).values
+        valid_mask_broadcast = np.broadcast_to(valid_mask, (n_ensembles_per_timestep, *p_hail_this_t.shape))
 
-        sampled_hail_magnitudes.append(masked_magnitudes)
+        # 4) event_magnitudes depends on hail_events and valid_mask:=-
+        event_magnitudes = np.where(
+            (hail_events == 1) & valid_mask_broadcast,
+            lognormal_samples,
+            0.0
+        )
+
+
+        sampled_hail_magnitudes.append(event_magnitudes.astype(np.float16))
 
     print("Hail Magnitude Sampling Completed!")
 
@@ -138,15 +118,29 @@ def main():
         dims=("ensemble", "time", "lat", "lon"),
         coords={
             "ensemble": np.arange(n_ensembles_per_timestep),
-            "time": hail_reg.time,
-            "lat": hail_reg.lat,
-            "lon": hail_reg.lon
+            "time": hail_prob.time,
+            "lat": hail_prob.lat,
+            "lon": hail_prob.lon
         },
         name="sampled_hail_magnitudes"
     )
 
-    print(f"Saving file to Zarr: {args.output_location}")
-    sampled_hail_magnitudes_da_log.to_zarr(args.output_location, mode="w")
+    print(f"Saving file to Zarr: {output_location}")
+    compressor = zarr.Blosc(cname='zstd', clevel=9, shuffle=2)
+
+    encoding = {
+        "sampled_hail_magnitudes": {
+            "compressor": compressor,
+            "dtype": "float16" 
+        }
+    }
+
+    sampled_hail_magnitudes_da_log.to_zarr(
+        args.output_location,
+        mode="w",
+        encoding=encoding
+    )
+
     print("Done!")
 
 
