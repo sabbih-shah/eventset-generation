@@ -30,7 +30,7 @@ The run.sh script will handle passing the appropriate arguments to the Python sc
    lognorm_scale_file
 ```
 
-Adjust the values in run.sh as needed for your specific data and time range.
+Adjust the values in run.sh as needed for your specific data and time range. Please, update the script according to your slurm environment. 
 
 ### Batch Year Processing
 
