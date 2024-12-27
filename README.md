@@ -30,7 +30,7 @@ The run.sh script will handle passing the appropriate arguments to the Python sc
    lognorm_scale_file
 ```
 
-Adjust the values in run.sh as needed for your specific data and time range. Please, update the script according to your slurm environment. 
+Adjust the values in run.sh as needed for your specific data and time range. 
 
 ### Batch Year Processing
 
@@ -54,4 +54,4 @@ These are used in the script as:
     OUTPUT_LOCATION="${OUTPUT_BASE}/${START_TIME}.zarr"
 ```
 
-Make sure to adjust the paths accordingly and only use **frequency** data with the above. 
+Make sure to adjust the paths accordingly and only use **frequency** data with the above. Please, update the script according to your slurm environment. 
