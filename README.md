@@ -47,3 +47,9 @@ OUTPUT_BASE="/pscratch/sd/s/sabbih/weather_forcasting/event_set"
 LOGNORM_SHAPE_FILE="/pscratch/sd/s/sabbih/weather_forcasting/event_set/lognorm_shape.nc"
 LOGNORM_SCALE_FILE="/pscratch/sd/s/sabbih/weather_forcasting/event_set/lognorm_scale.nc"
 ```
+
+These are used in the script as:
+```bash
+    INPUT_DATA_LOCATION="${INPUT_BASE}/${YEAR}/*.nc"
+    OUTPUT_LOCATION="${OUTPUT_BASE}/${START_TIME}.zarr"
+```
