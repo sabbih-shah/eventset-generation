@@ -8,7 +8,6 @@ import dask.array as da
 import sys
 import zarr
 
-
 def logits_to_prob_binary(logits):
     """
     Convert binary logits to probabilities using the sigmoid function.
@@ -38,14 +37,6 @@ def main():
     print(f"Slicing dataset from {args.start_time} to {args.end_time} ...")
     ds = ds.sel(time=slice(args.start_time, args.end_time))
 
-    # Convert hail logits -> hail_prob
-    hail_prob = ds["hail_logits"].map_blocks(logits_to_prob_binary).compute()
-    hail_prob = hail_prob.where(hail_prob >= 0.1, 0)
-
-    # If no data falls within the selected date range, raise an error
-    if hail_prob.time.size == 0:
-        raise ValueError("No data found in the specified time range.")
-
     # Convert ensembles per time step to a variable
     n_ensembles_per_timestep = args.ensemble_size
 
@@ -61,7 +52,13 @@ def main():
     # slice to Kansas
     lognorm_s = lognorm_s.sel(lat=slice(37.0, 40.0),lon=slice(-102.0, -94.0)).compute()
     lognorm_scale = lognorm_scale.sel(lat=slice(37.0, 40.0),lon=slice(-102.0, -94.0)).compute()
-    hail_prob = hail_prob.sel(lat=slice(37.0, 40.0),lon=slice(-102.0, -94.0)).compute()
+    ds = ds.sel(lat=slice(37.0, 40.0),lon=slice(-102.0, -94.0)).compute()
+    # Convert hail logits -> hail_prob
+    hail_prob = ds["hail_logits"].map_blocks(logits_to_prob_binary).compute()
+    hail_prob = hail_prob.where(hail_prob >= 0.1, 0)
+    # If no data falls within the selected date range, raise an error
+    if hail_prob.time.size == 0:
+        raise ValueError("No data found in the specified time range.")
     
     
     sampled_hail_magnitudes = []
