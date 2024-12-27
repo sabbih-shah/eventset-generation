@@ -55,7 +55,7 @@ def main():
     ds = ds.sel(lat=slice(37.0, 40.0),lon=slice(-102.0, -94.0)).compute()
     # Convert hail logits -> hail_prob
     hail_prob = ds["hail_logits"].map_blocks(logits_to_prob_binary).compute()
-    hail_prob = hail_prob.where(hail_prob >= 0.1, 0)
+    # hail_prob = hail_prob.where(hail_prob >= 0.1, 0)
     # If no data falls within the selected date range, raise an error
     if hail_prob.time.size == 0:
         raise ValueError("No data found in the specified time range.")
