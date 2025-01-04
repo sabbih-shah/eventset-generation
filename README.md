@@ -55,3 +55,47 @@ These are used in the script as:
 ```
 
 Make sure to adjust the paths accordingly and only use **frequency** data with the above. Please, update the script according to your slurm environment. 
+
+
+# compute_mean_prob.py
+
+This script computes hail probabilities for specified hail ranges, time periods, and ensembles from a collection of Zarr datasets. It can also automatically derive the start and end years from the dataset’s time dimension if not provided.
+
+## Description
+
+1. Reads multiple Zarr datasets specified by an `input_path` (supports globbing, e.g. `"/path/to/data/*/*.zarr"`).
+2. Optionally slices over an ensemble dimension (with defaults from 0 to 99).
+3. Computes the mean probability of hail occurring within predefined hail ranges.
+4. Outputs the results in a new Zarr file, named based on the provided or extracted start/end dates and the selected ensemble range.
+
+## Arguments
+
+- **`input_path`** *(str, required)*  
+  Path pattern for the Zarr datasets (for example, `"/path/to/data/*/*.zarr"`).
+
+- **`output_dir`** *(str, required)*  
+  Directory where the output Zarr file will be saved.
+
+- **`--start_date`** *(str, optional)*  
+  Start date (used only in the output filename). If not provided, the script automatically extracts the earliest year from the dataset’s time dimension.
+
+- **`--end_date`** *(str, optional)*  
+  End date (used only in the output filename). If not provided, the script automatically extracts the latest year from the dataset’s time dimension.
+
+- **`--ensemble_start`** *(int, optional, default=0)*  
+  First ensemble member index (inclusive).
+
+- **`--ensemble_end`** *(int, optional, default=99)*  
+  Last ensemble member index (inclusive).
+
+## Usage
+
+1. Activate your python env first and then:
+   ```bash
+   python compute_mean_prob.py \
+    "/pscratch/sd/s/sabbih/aws/vayuh/event-sets/2010-2023/*/*.zarr" \
+    "/path/to/output_dir" \
+    --ensemble_start 0 \
+    --ensemble_end 99
+```
+The ensemble selection option can be used to manage the peak memory load of the calculations.
