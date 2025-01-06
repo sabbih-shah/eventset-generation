@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import xarray as xr
 import argparse
 import os
@@ -5,6 +7,7 @@ import os
 def main():
     parser = argparse.ArgumentParser(description="Compute hail range means and save to Zarr.")
     
+    # Required positional arguments with defaults:
     parser.add_argument(
         "input_path",
         help="Input path pattern for the Zarr datasets (e.g. /path/*/*.zarr)."
@@ -13,76 +16,73 @@ def main():
         "output_dir",
         help="Directory where the output Zarr file will be saved."
     )
-    
-    # Make start_date and end_date optional:
     parser.add_argument(
-        "--start_date",
-        help="Start date (used only in output filename). If not provided, extracted from dataset time dimension."
+        "start_date",
+        nargs="?",
+        default="2010-01-01",  # default if user doesn't supply
+        help="Start date for slicing the dataset (e.g., 2010-01-01)."
     )
     parser.add_argument(
-        "--end_date",
-        help="End date (used only in output filename). If not provided, extracted from dataset time dimension."
+        "end_date",
+        nargs="?",
+        default="2023-12-31",  # default if user doesn't supply
+        help="End date for slicing the dataset (e.g., 2023-12-31)."
     )
     
     parser.add_argument(
         "--ensemble_start",
         type=int,
         default=0,
-        help="First ensemble member index (inclusive). Default is 0."
+        help="First ensemble member index (inclusive). Default=0."
     )
     parser.add_argument(
         "--ensemble_end",
         type=int,
         default=99,
-        help="Last ensemble member index (inclusive). Default is 99."
+        help="Last ensemble member index (inclusive). Default=99."
     )
     
     args = parser.parse_args()
+    start_year = args.start_date.split("-")[0]
+    end_year = args.end_date.split("-")[0]
     
-    # Define your hail ranges
+    # Define hail ranges
     hail_ranges = [(0.1, 1), (1, 2), (2, 25)]
     
-    # 1) Open the dataset across multiple files, selecting the specified ensemble range
-    ds = xr.open_mfdataset(args.input_path, engine="zarr").sel(
-        ensemble=slice(args.ensemble_start, args.ensemble_end)
-    )
+    # 1) Open the dataset across multiple files
+    ds = xr.open_mfdataset(args.input_path, engine="zarr")
     
-    # 2) Chunking for better loading times, then compute in memory
+    # 2) Chunk for better loading times (no .compute() yet)
     ds = ds.chunk({
         'lat': -1,
         'lon': -1,
         'time': 100,
         'ensemble': 10
-    }).compute()
-
-    ds_start_year = str(ds.time[0].dt.year.values)
-    ds_end_year   = str(ds.time[-1].dt.year.values)
-
-    if args.start_date is None:
-        start_date = ds_start_year
-    else:
-        start_date = args.start_date
-
-    if args.end_date is None:
-        end_date = ds_end_year
-    else:
-        end_date = args.end_date
-
-    # 3) Create an output Dataset 
+    })
+    
+    # 3) Slice by ensemble range and time range, then compute
+    ds = ds.sel(
+        ensemble=slice(args.ensemble_start, args.ensemble_end),
+        time=slice(args.start_date, args.end_date)
+    ).compute()
+    
+    # 4) Create an output Dataset to hold results for each hail range
     ds_result = xr.Dataset()
-
-    # 4) Compute the mean for each hail range
     for (low, high) in hail_ranges:
         var_name = f"probability_{low}_{high}"
         ds_result[var_name] = (
-            (ds["sampled_hail_magnitudes"] >= low) 
+            (ds["sampled_hail_magnitudes"] >= low)
             & (ds["sampled_hail_magnitudes"] < high)
         ).mean(dim=["ensemble", "time"])
     
-    # 5) Build the output filename and write the dataset to Zarr
-    output_filename = f"{start_date}-{end_date}_ensemble_{args.ensemble_start}-{args.ensemble_end}.zarr"
+    # 5) Build the output filename with just the year range
+    output_filename = (
+        f"{start_year}-{end_year}_ensemble_"
+        f"{args.ensemble_start}-{args.ensemble_end}.zarr"
+    )
     output_path = os.path.join(args.output_dir, output_filename)
     
+    # 6) Save the dataset to Zarr
     ds_result.to_zarr(output_path, mode="w")
     print(f"Saved results to {output_path}")
 
