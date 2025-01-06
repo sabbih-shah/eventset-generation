@@ -76,11 +76,11 @@ This script computes hail probabilities for specified hail ranges, time periods,
 - **`output_dir`** *(str, required)*  
   Directory where the output Zarr file will be saved.
 
-- **`--start_date`** *(str, optional)*  
-  Start date (used only in the output filename). If not provided, the script automatically extracts the earliest year from the dataset’s time dimension.
+- **`--start_date`** *(str, required)*  
+  Start date. Used for slicing the dataset and part of the saved filename.
 
-- **`--end_date`** *(str, optional)*  
-  End date (used only in the output filename). If not provided, the script automatically extracts the latest year from the dataset’s time dimension.
+- **`--end_date`** *(str, required)*  
+  End date. Used for slicing the dataset and part of the saved filename.
 
 - **`--ensemble_start`** *(int, optional, default=0)*  
   First ensemble member index (inclusive).
@@ -95,6 +95,8 @@ This script computes hail probabilities for specified hail ranges, time periods,
    python compute_mean_prob.py \
     "/pscratch/sd/s/sabbih/aws/vayuh/event-sets/2010-2023/*/*.zarr" \
     "/path/to/output_dir" \
+    "2010-01-01" \
+    "2023-12-31" \
     --ensemble_start 0 \
     --ensemble_end 99
 ```
