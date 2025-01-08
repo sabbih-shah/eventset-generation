@@ -50,7 +50,7 @@ def main():
     hail_ranges = [(0.1, 1), (1, 2), (2, 25)]
     
     # 1) Open the dataset across multiple files
-    ds = xr.open_mfdataset(args.input_path, engine="zarr")
+    ds = xr.open_mfdataset(args.input_path, engine="zarr", parallel=True)
     
     # 2) Chunk for better loading times (no .compute() yet)
     ds = ds.chunk({
