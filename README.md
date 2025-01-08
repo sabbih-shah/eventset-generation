@@ -103,7 +103,7 @@ This script computes hail probabilities for specified hail ranges, time periods,
 The ensemble selection option can be used to manage the peak memory load of the calculations.
 
 # Batch Compute Prob
-The `batch_compute_prob.sh` file submits each year independently to slurm. The script loops through each year starting from `1980` to `2023` and loads all ensemble members to memory before computing the probabilites. The peak memory usage for a single year with all members is 120 GB and it takes 40 to 50 minutes to compute the probabilities and save the resultant file.
+The `batch_compute_prob.sh` file submits each year independently to slurm. The script loops through each year starting from `1980` to `2023` and loads all ensemble members to memory before computing the probabilites. The peak memory usage for a single year with all members is 150 GB and it takes 40 to 50 minutes to compute the probabilities and save the resultant file.
 
 ```
 INPUT_PATH="/fsx/vayu/results/event_set/*.zarr"
