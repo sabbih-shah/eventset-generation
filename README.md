@@ -111,4 +111,4 @@ OUTPUT_DIR="/pscratch/sd/s/sabbih/weather_forecasting/event_set/data/test"
 YEAR_START=1980
 YEAR_END=2023
 ```
-Please set the above paths in the script and double check the slurm flags.
+Please set the above paths in the script accordingly and double check the slurm flags.
