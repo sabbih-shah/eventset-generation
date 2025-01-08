@@ -9,7 +9,7 @@
 # ----------------------------
 # 1) General user parameters:
 # ----------------------------
-INPUT_PATH="/pscratch/sd/s/sabbih/aws/vayuh/event-sets/2010-2023/*/*.zarr"
+INPUT_PATH="/fsx/vayu/results/event_set/*.zarr"
 OUTPUT_DIR="/pscratch/sd/s/sabbih/weather_forecasting/event_set/data/test"
 YEAR_START=1980
 YEAR_END=2023
