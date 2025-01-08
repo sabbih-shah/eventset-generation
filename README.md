@@ -88,7 +88,7 @@ This script computes hail probabilities for specified hail ranges, time periods,
 - **`--ensemble_end`** *(int, optional, default=99)*  
   Last ensemble member index (inclusive).
 
-## Usage
+## Example Usage
 
 1. Activate your python env first and then:
    ```bash
