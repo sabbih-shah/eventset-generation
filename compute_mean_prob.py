@@ -57,7 +57,7 @@ def main():
         'lat': -1,
         'lon': -1,
         'time': 100,
-        'ensemble': 10
+        'ensemble': 100
     })
     
     # 3) Slice by ensemble range and time range, then compute
